@@ -215,15 +215,6 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="sidebar-nav">
-        <button
-          className="sidebar-collapse-btn"
-          onClick={toggleCollapse}
-          title={collapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-        >
-          {collapsed ? <ChevronsRight size={12} /> : <ChevronsLeft size={12} />}
-        </button>
-
         {NAV_ITEMS.map(({ href, icon: Icon, label, matchPaths, showBadge }) => {
           const active = matchPaths
             ? matchPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))
@@ -245,6 +236,16 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Collapse toggle — direct child of aside so top:50% centers on full sidebar height */}
+      <button
+        className="sidebar-collapse-btn"
+        onClick={toggleCollapse}
+        title={collapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {collapsed ? <ChevronsRight size={12} /> : <ChevronsLeft size={12} />}
+      </button>
 
       {/* Campaign Filters */}
       {inCampaign && !collapsed && (
