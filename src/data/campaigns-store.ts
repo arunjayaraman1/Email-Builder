@@ -12,6 +12,7 @@ export interface CampaignRecord {
   status: string;
   opens: string;
   createdAt: string;
+  scheduledAt?: string;
 }
 
 // In-memory store — persists for dev server lifetime

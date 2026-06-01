@@ -78,6 +78,7 @@ export interface CampaignRecord {
   status: string;
   opens: string;
   createdAt: string;
+  scheduledAt?: string;
 }
 
 export async function getCampaigns(): Promise<CampaignRecord[]> {
@@ -95,6 +96,7 @@ export async function saveCampaign(body: {
   tone: string;
   subject: string;
   status: "draft" | "scheduled";
+  scheduledAt?: string;
 }): Promise<CampaignRecord> {
   const res = await fetch(`${API}/api/campaigns`, {
     method: "POST",

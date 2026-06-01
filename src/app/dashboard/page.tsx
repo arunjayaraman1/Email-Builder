@@ -158,7 +158,10 @@ export default function DashboardPage() {
                     <td style={{ color: "var(--muted)" }}>{c.therapyArea}</td>
                     <td><span className={`badge-status badge-${c.status}`}>{c.status.charAt(0).toUpperCase() + c.status.slice(1)}</span></td>
                     <td style={{ fontWeight: c.opens !== "—" ? 600 : 400, color: c.opens !== "—" ? "var(--ink)" : "var(--muted-2)" }}>{c.opens}</td>
-                    <td style={{ color: "var(--muted)", display: "flex", alignItems: "center", gap: 5 }}><Clock size={11} /> {formatDate(c.createdAt)}</td>
+                    <td style={{ color: "var(--muted)", display: "flex", alignItems: "center", gap: 5 }}>
+                      <Clock size={11} />
+                      {c.status === "scheduled" && c.scheduledAt ? formatDate(c.scheduledAt) : formatDate(c.createdAt)}
+                    </td>
                   </tr>
                 ))}
               </tbody>

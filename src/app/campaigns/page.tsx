@@ -41,9 +41,13 @@ export default function CampaignsPage() {
     draft: campaigns.filter((c) => c.status === "draft").length,
   };
 
-  function formatDate(iso: string) {
+  function formatDate(iso: string, includeTime = false) {
     try {
-      return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const d = new Date(iso);
+      const datePart = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      if (!includeTime) return datePart;
+      const timePart = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      return `${datePart} · ${timePart}`;
     } catch { return iso; }
   }
 
@@ -125,7 +129,13 @@ export default function CampaignsPage() {
                       <span style={{ color: "var(--muted-2)" }}>—</span>
                     )}
                   </td>
-                  <td style={{ color: "var(--muted)", display: "flex", alignItems: "center", gap: 5 }}><Clock size={11} /> {formatDate(c.createdAt)}</td>
+                  <td style={{ color: "var(--muted)", display: "flex", alignItems: "center", gap: 5 }}>
+                    <Clock size={11} />
+                    {c.status === "scheduled" && c.scheduledAt
+                      ? <span title="Scheduled send time">{formatDate(c.scheduledAt, true)}</span>
+                      : formatDate(c.createdAt)
+                    }
+                  </td>
                 </tr>
               ))}
             </tbody>

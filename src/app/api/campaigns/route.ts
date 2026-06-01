@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     status: body.status,
     opens: body.status === "sent" ? (OPENS_MAP[body.templateId] ?? "—") : "—",
     createdAt: new Date().toISOString(),
+    scheduledAt: body.scheduledAt ?? undefined,
   };
   CAMPAIGNS.push(record);
   return NextResponse.json(record);
