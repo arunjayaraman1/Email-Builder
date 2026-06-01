@@ -5,6 +5,7 @@ import { Search, Eye, Star, List, LayoutGrid, Loader2, Sparkles, X } from "lucid
 import { useCampaignStore } from "@/lib/store";
 import { generateFromFilters } from "@/lib/api";
 import { TONE_COLOR, TONE_BG } from "@/lib/tones";
+import { CONCEPT_MAP } from "@/data/templates";
 import type { TemplateCard } from "@/lib/types";
 
 function MiniMail({ tone, name }: { tone: string; name: string }) {
@@ -119,10 +120,10 @@ export default function TemplateLibrary() {
   });
 
   const activeChips = [
-    ...filters.concepts.map((c) => ({ key: "concepts" as const, val: c, dot: undefined as string | undefined })),
-    ...filters.tones.map((t) => ({ key: "tones" as const, val: t, dot: TONE_COLOR[t] })),
-    ...filters.specialties.map((s) => ({ key: "specialties" as const, val: s, dot: undefined })),
-    ...filters.compliance.map((c) => ({ key: "compliance" as const, val: c, dot: undefined })),
+    ...filters.concepts.map((c) => ({ key: "concepts" as const, val: c, label: `Concept: ${CONCEPT_MAP[c] ?? c}`, dot: undefined as string | undefined })),
+    ...filters.tones.map((t) => ({ key: "tones" as const, val: t, label: t, dot: TONE_COLOR[t] })),
+    ...filters.specialties.map((s) => ({ key: "specialties" as const, val: s, label: s, dot: undefined })),
+    ...filters.compliance.map((c) => ({ key: "compliance" as const, val: c, label: c, dot: undefined })),
   ];
 
   if (loading) {
@@ -164,7 +165,7 @@ export default function TemplateLibrary() {
             setFilters({ [c.key]: cur.filter((x) => x !== c.val) });
           }}>
             {c.dot && <span className="dot" style={{ background: c.dot }} />}
-            {c.val}
+            {c.label}
             <span className="x"><X size={10} /></span>
           </span>
         ))}

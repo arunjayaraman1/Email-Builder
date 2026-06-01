@@ -9,7 +9,7 @@ import type { CampaignMode } from "@/lib/types";
 import { useState } from "react";
 
 const TABS: { id: CampaignMode; icon: React.ElementType; label: string; badge?: string; badgeKind?: "new" }[] = [
-  { id: "library", icon: LayoutGrid,  label: "Library",       badge: "14" },
+  { id: "library", icon: LayoutGrid,  label: "Library" },
   { id: "wizard",  icon: Compass,     label: "Guided wizard" },
   { id: "ai",      icon: Sparkles,    label: "AI assistant",  badge: "Beta", badgeKind: "new" },
 ];

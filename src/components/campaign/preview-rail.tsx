@@ -592,8 +592,8 @@ export default function PreviewRail() {
         <div style={{ padding: "10px 12px", borderTop: "2px solid var(--line)", borderBottom: "1px solid var(--line-2)", background: "white", flexShrink: 0 }}>
           <div className="pvx-seg compact">
             {([
-              { id: "desktop", icon: <Monitor size={11} />, label: "D" },
-              { id: "mobile",  icon: <Smartphone size={11} />, label: "M" },
+              { id: "desktop", icon: <Monitor size={11} />, label: "Desktop" },
+              { id: "mobile",  icon: <Smartphone size={11} />, label: "Mobile" },
               { id: "both",    icon: null, label: "Both" },
             ] as const).map(({ id, icon, label }) => (
               <button key={id} className={device === id ? "on" : ""} onClick={() => setDevice(id)}>

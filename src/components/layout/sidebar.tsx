@@ -1,16 +1,89 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, PlusCircle, Mail, LayoutGrid, Shield, Check, Loader2 } from "lucide-react";
+import { LayoutDashboard, PlusCircle, Mail, LayoutGrid, Check, Loader2, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { useCampaignStore } from "@/lib/store";
-import { getOptions } from "@/lib/api";
+import { getOptions, getCampaigns } from "@/lib/api";
 import { TONE_COLOR } from "@/lib/tones";
+import { TEMPLATES, CONCEPT_MAP } from "@/data/templates";
 
-const NAV_ITEMS = [
+const CONCEPT_LIMIT = 5;
+
+function ConceptFilter({
+  concepts,
+  filters,
+  onToggle,
+  onClear,
+}: {
+  concepts: string[];
+  filters: { concepts: string[]; specialties: string[]; compliance: string[]; tones: string[] };
+  onToggle: (concept: string) => void;
+  onClear: () => void;
+}) {
+  const [showAll, setShowAll] = useState(false);
+
+  const counts = useMemo(() => {
+    const result: Record<string, number> = {};
+    for (const concept of concepts) {
+      result[concept] = TEMPLATES.filter((t) => {
+        if (t.concept !== concept) return false;
+        if (filters.specialties.length && !t.audiences.some((a) => filters.specialties.includes(a))) return false;
+        if (filters.compliance.length && !t.compliance.some((c) => filters.compliance.includes(c))) return false;
+        if (filters.tones.length && !filters.tones.includes(t.tone)) return false;
+        return true;
+      }).length;
+    }
+    return result;
+  }, [concepts, filters.specialties, filters.compliance, filters.tones]);
+
+  const sorted = [...concepts].sort((a, b) => (counts[b] ?? 0) - (counts[a] ?? 0));
+  const visible = showAll ? sorted : sorted.slice(0, CONCEPT_LIMIT);
+  const remaining = sorted.length - CONCEPT_LIMIT;
+
+  return (
+    <div className="filter-block">
+      <div className="filter-block-header">
+        <span className="filter-block-label">Concept</span>
+        {filters.concepts.length > 0 && (
+          <button className="filter-block-clear" onClick={onClear}>Clear</button>
+        )}
+      </div>
+      {visible.map((concept) => {
+        const checked = filters.concepts.includes(concept);
+        return (
+          <div
+            key={concept}
+            className={`filter-item${checked ? " checked" : ""}`}
+            onClick={() => onToggle(concept)}
+          >
+            <span className={`filter-checkbox${checked ? " checked" : ""}`}>
+              {checked && <Check size={10} />}
+            </span>
+            <span className="filter-item-label">{CONCEPT_MAP[concept] ?? concept}</span>
+            <span className="filter-count">{counts[concept] ?? 0}</span>
+          </div>
+        );
+      })}
+      {sorted.length > CONCEPT_LIMIT && (
+        <button className="filter-show-more" onClick={() => setShowAll((v) => !v)}>
+          {showAll ? "Show less ↑" : `Show ${remaining} more →`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+const NAV_ITEMS: {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  matchPaths?: string[];
+  showBadge?: boolean;
+}[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { href: "/campaigns", icon: Mail, label: "Campaigns" },
+  { href: "/campaigns", icon: Mail, label: "Campaigns", matchPaths: ["/campaigns", "/campaign"], showBadge: true },
   { href: "/templates", icon: LayoutGrid, label: "Templates" },
 ];
 
@@ -21,6 +94,8 @@ export default function Sidebar() {
   const { filters, setFilters } = useCampaignStore();
   const inCampaign = pathname === "/campaign";
 
+  const [collapsed, setCollapsed] = useState(false);
+  const [campaignCount, setCampaignCount] = useState<number | null>(null);
   const [concepts, setConcepts] = useState<string[]>([]);
   const [tones, setTones] = useState<string[]>([]);
   const [specialties, setSpecialties] = useState<string[]>([]);
@@ -29,6 +104,34 @@ export default function Sidebar() {
   const [range, setRange] = useState<[number, number]>(filters.readTimeRange);
   const sliderRef = useRef<HTMLDivElement>(null);
   const dragging = useRef<"min" | "max" | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("sidebar_collapsed");
+    if (stored === "true") setCollapsed(true);
+  }, []);
+
+  const toggleCollapse = useCallback(() => {
+    setCollapsed((v) => {
+      const next = !v;
+      localStorage.setItem("sidebar_collapsed", String(next));
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "b") {
+        e.preventDefault();
+        toggleCollapse();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [toggleCollapse]);
+
+  useEffect(() => {
+    getCampaigns().then((cs) => setCampaignCount(cs.length)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!inCampaign) return;
@@ -88,11 +191,11 @@ export default function Sidebar() {
   const maxPct = ((range[1] - 1) / 7) * 100;
 
   return (
-    <aside className="app-sidebar">
+    <aside className={`app-sidebar${collapsed ? " collapsed" : ""}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">H</div>
-        <div>
+        <div className="sidebar-logo-text">
           <div className="sidebar-logo-title">HCP Campaign</div>
           <div className="sidebar-logo-sub">Studio</div>
         </div>
@@ -104,26 +207,47 @@ export default function Sidebar() {
           href="/campaign"
           className={`nav-item primary${pathname === "/campaign" ? " active" : ""}`}
         >
-          <PlusCircle size={15} />
-          New Campaign
+          <PlusCircle size={18} />
+          <span className="nav-label">New Campaign</span>
+          <span className="nav-tooltip">New Campaign</span>
         </Link>
       </div>
 
       {/* Nav */}
       <nav className="sidebar-nav">
-        {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
-          const active = pathname === href || (href !== "/" && pathname.startsWith(href));
+        <button
+          className="sidebar-collapse-btn"
+          onClick={toggleCollapse}
+          title={collapsed ? "Expand sidebar (⌘B)" : "Collapse sidebar (⌘B)"}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <ChevronsRight size={12} /> : <ChevronsLeft size={12} />}
+        </button>
+
+        {NAV_ITEMS.map(({ href, icon: Icon, label, matchPaths, showBadge }) => {
+          const active = matchPaths
+            ? matchPaths.some((p) => pathname === p || pathname.startsWith(p + "/"))
+            : pathname === href || (href !== "/" && pathname.startsWith(href));
           return (
-            <Link key={href} href={href} className={`nav-item${active ? " active" : ""}`}>
-              <Icon size={15} />
-              {label}
+            <Link
+              key={href}
+              href={href}
+              className={`nav-item${active ? " active" : ""}`}
+              aria-current={active ? "page" : undefined}
+            >
+              <Icon size={18} />
+              <span className="nav-label">{label}</span>
+              {showBadge && campaignCount !== null && (
+                <span className="nav-badge nav-label">{campaignCount}</span>
+              )}
+              <span className="nav-tooltip">{label}</span>
             </Link>
           );
         })}
       </nav>
 
       {/* Campaign Filters */}
-      {inCampaign && (
+      {inCampaign && !collapsed && (
         <div className="sidebar-filters">
           {loading ? (
             <div className="sidebar-loading">
@@ -140,19 +264,12 @@ export default function Sidebar() {
                 )}
               </div>
 
-              <div className="filter-block">
-                <h4>Concept</h4>
-                {concepts.map((c) => (
-                  <div key={c} className="filter-row" onClick={() => toggle("concepts", c)}>
-                    <div className="label">
-                      <span className={"check " + (filters.concepts.includes(c) ? "checked" : "")}>
-                        {filters.concepts.includes(c) && <Check size={9} />}
-                      </span>
-                      <span>{c}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ConceptFilter
+                concepts={concepts}
+                filters={filters}
+                onToggle={(concept) => toggle("concepts", concept)}
+                onClear={() => setFilters({ concepts: [] })}
+              />
 
               <div className="filter-block">
                 <h4>Tone</h4>
@@ -220,15 +337,11 @@ export default function Sidebar() {
 
       {/* Bottom */}
       <div className="sidebar-bottom">
-        <div className="nav-item" style={{ cursor: "default", opacity: 0.55 }}>
-          <Shield size={15} />
-          Admin
-        </div>
         <div className="sidebar-user">
-          <div className="sidebar-user-avatar">
+          <div className="sidebar-user-avatar" title={collapsed ? userName : undefined}>
             {(process.env.NEXT_PUBLIC_USER_INITIALS ?? userName.slice(0, 2).toUpperCase())}
           </div>
-          <div>
+          <div className="sidebar-user-text">
             <div className="sidebar-user-name">{userName}</div>
             <div className="sidebar-user-role">{process.env.NEXT_PUBLIC_USER_ROLE ?? "Member"}</div>
           </div>
