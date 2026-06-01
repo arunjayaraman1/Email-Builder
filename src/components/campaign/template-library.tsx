@@ -13,7 +13,7 @@ function MiniMail({ tone, name }: { tone: string; name: string }) {
   return (
     <div className="mini-mail">
       <div className="mm-h">
-        <span>{tone === "Conversational" ? "Dr. A. Park" : "Northvale"}</span>
+        <span>{tone === "Conversational" ? "Dr. A. Park" : "HCP Campaign"}</span>
         <span>7:42 AM</span>
       </div>
       <div className="mm-title">{name}</div>

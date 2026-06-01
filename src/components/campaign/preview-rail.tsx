@@ -83,7 +83,7 @@ function EmailContent({ email, toneColor, concept, therapyArea, width }: {
   toneColor: string; concept: string; therapyArea: string; width: number;
 }) {
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", background: "white", width: "100%", maxWidth: width }}>
+    <div style={{ fontFamily: "system-ui, sans-serif", background: "white", width: width, flexShrink: 0 }}>
       <div style={{ display: "none" }}>{email.preheader}</div>
       <div className="email-head">
         <div style={{ fontSize: 10, fontWeight: 700, color: toneColor, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
@@ -119,27 +119,79 @@ function EmailContent({ email, toneColor, concept, therapyArea, width }: {
 
 // ─── Polished device frames ───────────────────────────────────────────────────
 
-function DesktopFrame({ children, subject }: { children: React.ReactNode; subject?: string }) {
+function DesktopFrame({ children, subject, toneColor, readTime, recipientName, audienceSize }: {
+  children: React.ReactNode;
+  subject?: string;
+  toneColor?: string;
+  readTime?: string;
+  recipientName?: string;
+  audienceSize?: string;
+}) {
+  const tone = toneColor ?? "#1D5874";
+  const initials = "H";
+
   return (
     <div className="pvx-browser">
+      {/* Row 1 — Window chrome (traffic lights + address bar) */}
       <div className="pvx-browser-chrome">
-        <div className="pvx-traffic">
-          <span /><span /><span />
+        <div className="pvx-traffic"><span /><span /><span /></div>
+        <div style={{ display: "flex", gap: 6, marginLeft: 4 }}>
+          {["←", "→"].map((a, i) => (
+            <span key={i} style={{ fontSize: 13, color: "var(--muted-2)", cursor: "default", userSelect: "none" }}>{a}</span>
+          ))}
         </div>
         <div className="pvx-omnibox">
           <span>🔒</span>
-          <span>hcp-campaign-studio.local</span>
+          <span>mail.hcpcampaign.com/inbox</span>
         </div>
-        <div className="pvx-chrome-r">☆</div>
+        <div className="pvx-chrome-r" style={{ display: "flex", gap: 6, fontSize: 13, color: "var(--muted-2)" }}>
+          <span>☆</span><span>⬆</span>
+        </div>
       </div>
-      <div className="pvx-browser-tabbar">
-        <div style={{ width: 12, height: 12, borderRadius: 3, background: "#1D5874", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, fontWeight: 700, color: "white", flexShrink: 0 }}>H</div>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {subject ?? "HCP Campaign Studio"}
-        </span>
-        <span className="pvx-tabcount">1</span>
-        <span style={{ marginLeft: "auto", color: "var(--muted-2)", cursor: "pointer" }}>✕</span>
+
+      {/* Row 2 — Inbox navigation bar */}
+      <div className="pvx-inbox-nav">
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button className="pvx-nav-icon">←</button>
+          <button className="pvx-nav-icon">→</button>
+          <span className="pvx-inbox-label">Inbox</span>
+          <span style={{ color: "var(--muted)", fontSize: 12 }}>· 1 of 248</span>
+        </div>
+        <div style={{ flex: 1 }} />
+        <div style={{ display: "flex", gap: 6 }}>
+          {["⎘", "🗑", "⚑", "⋯"].map((ic, i) => (
+            <button key={i} className="pvx-nav-icon">{ic}</button>
+          ))}
+        </div>
       </div>
+
+      {/* Row 3 — Subject heading */}
+      <div className="pvx-subject-row">
+        <div className="pvx-subject-title">{subject ?? "HCP Campaign Studio"}</div>
+        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+          {readTime && <span className="pvx-meta-chip"><span>⏱</span>{readTime}</span>}
+          {audienceSize && <span className="pvx-meta-chip"><span>👥</span>{audienceSize}</span>}
+        </div>
+      </div>
+
+      {/* Row 4 — Sender card */}
+      <div className="pvx-sender-row">
+        <div className="pvx-sender-ava">{initials}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 2 }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>HCP Campaign Studio</span>
+            <span style={{ fontSize: 11.5, color: "var(--muted)" }}>&lt;noreply@hcpcampaign.com&gt;</span>
+          </div>
+          <div style={{ fontSize: 11.5, color: "var(--muted)" }}>
+            to {recipientName ?? "Dr. Aniya Park"} · Today at 7:42 AM
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, color: "var(--muted-2)", fontSize: 16, flexShrink: 0 }}>
+          <span style={{ cursor: "pointer" }}>↩</span>
+          <span style={{ cursor: "pointer" }}>⋯</span>
+        </div>
+      </div>
+
       <div className="pvx-scroll">{children}</div>
     </div>
   );
@@ -246,9 +298,27 @@ function PolishField({
 
 // ─── Device frames ────────────────────────────────────────────────────────────
 
-function DeviceFrame({ device, children, subject }: { device: "desktop" | "mobile"; children: React.ReactNode; subject?: string }) {
+function DeviceFrame({ device, children, subject, toneColor, readTime, recipientName, audienceSize }: {
+  device: "desktop" | "mobile";
+  children: React.ReactNode;
+  subject?: string;
+  toneColor?: string;
+  readTime?: string;
+  recipientName?: string;
+  audienceSize?: string;
+}) {
   if (device === "mobile") return <MobileFrame>{children}</MobileFrame>;
-  return <DesktopFrame subject={subject}>{children}</DesktopFrame>;
+  return (
+    <DesktopFrame
+      subject={subject}
+      toneColor={toneColor}
+      readTime={readTime}
+      recipientName={recipientName}
+      audienceSize={audienceSize}
+    >
+      {children}
+    </DesktopFrame>
+  );
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -687,19 +757,32 @@ export default function PreviewRail() {
           {/* Device stage — uses live edit values when editMode is on */}
           <div className={`pvx-stage${editMode ? "" : ""}`} style={{ flex: editMode ? "none" : 1, overflowY: editMode ? "hidden" : "auto", maxHeight: editMode ? "45vh" : undefined, padding: editMode ? "20px 32px" : "28px" }}>
             <div className={`pvx-stage-row${theaterDevice === "both" ? " both" : theaterDevice === "desktop" ? " one-desktop" : " one-mobile"}`}>
-              {(theaterDevice === "both" ? ["desktop", "mobile"] : [theaterDevice]).map((d) => (
-                <DeviceFrame key={d} device={d as "desktop" | "mobile"} subject={subject || emailData.subject}>
-                  {!generatedEmail && fullTemplate && !editMode ? (
-                    <EmailBody template={{ tone: TONE_MAP[fullTemplate.tone] ?? fullTemplate.tone, hero: fullTemplate.hero, body_type: fullTemplate.body_type }} />
+              {(theaterDevice === "both" ? ["desktop", "mobile"] : [theaterDevice]).map((d) => {
+                const liveEmail = {
+                  ...emailData,
+                  subject: subject || emailData.subject,
+                  headline: editMode ? editHeadline || emailData.headline : emailData.headline,
+                  body: editMode ? editBody || emailData.body : emailData.body,
+                  cta: editMode ? editCta || emailData.cta : emailData.cta,
+                };
+                const templateForBody: EmailBodyTemplate | null = fullTemplate
+                  ? { tone: TONE_MAP[fullTemplate.tone] ?? fullTemplate.tone, hero: { eyebrow: `${selectedTemplate?.concept ?? ""} · ${campaignCtx.therapyArea}`, title: liveEmail.headline, sub: liveEmail.preheader }, body_type: fullTemplate.body_type }
+                  : null;
+                return (
+                <DeviceFrame
+                  key={d}
+                  device={d as "desktop" | "mobile"}
+                  subject={liveEmail.subject}
+                  toneColor={toneColor}
+                  readTime={selectedTemplate?.duration}
+                  recipientName={campaignCtx.audience === "HCP" ? "Dr. Aniya Park" : "Sarah Mitchell"}
+                  audienceSize={campaignCtx.audience}
+                >
+                  {templateForBody && !editMode ? (
+                    <EmailBody template={templateForBody} />
                   ) : (
                     <EmailContent
-                      email={{
-                        ...emailData,
-                        subject: subject || emailData.subject,
-                        headline: editMode ? editHeadline || emailData.headline : emailData.headline,
-                        body: editMode ? editBody || emailData.body : emailData.body,
-                        cta: editMode ? editCta || emailData.cta : emailData.cta,
-                      }}
+                      email={liveEmail}
                       toneColor={toneColor}
                       concept={selectedTemplate?.concept ?? ""}
                       therapyArea={campaignCtx.therapyArea}
@@ -707,7 +790,8 @@ export default function PreviewRail() {
                     />
                   )}
                 </DeviceFrame>
-              ))}
+                );
+              })}
             </div>
           </div>
 

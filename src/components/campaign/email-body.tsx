@@ -36,7 +36,7 @@ export function ISIBlock() {
 export function EmailFoot() {
   return (
     <div className="email-foot">
-      You're receiving this email because you opted in to clinical updates from Northvale Therapeutics, Inc. ·{" "}
+      You're receiving this email because you opted in to clinical updates from HCP Campaign Studio ·{" "}
       <a style={{ color: "var(--accent)" }}>Manage preferences</a> · <a style={{ color: "var(--accent)" }}>Unsubscribe</a><br />
       Intended for US healthcare professionals only. 200 Powell St, San Francisco, CA 94102.
     </div>
@@ -72,7 +72,7 @@ const Bodies: Record<string, BodyRenderer> = {
       <p>The signal isn't subtle: in the 412 patients in that strata, titration to target was associated with a 17% lower rate of HF hospitalization at 12 months. The renal endpoints are reassuring. I'd encourage you to look at Table 3 yourself — I'm linking the supplement below.</p>
       <a className="email-cta outline">Read the GUIDE-HF supplement</a>
       <p>Happy to talk it through. I'll be at the regional VAD meeting in November if you'll be there.</p>
-      <p>Warmly,<br /><strong>Dr. Aniya Park, MD</strong><br />Cardiovascular Disease · Northvale Heart Institute</p>
+      <p>Warmly,<br /><strong>Dr. Aniya Park, MD</strong><br />Cardiovascular Disease · HCP Campaign Institute</p>
       <EmailFoot />
     </div>
   ),
@@ -136,7 +136,7 @@ const Bodies: Record<string, BodyRenderer> = {
       <div className="email-callout">
         <div className="label">Series at a glance</div>
         <strong>12 weeks</strong> · <strong>0.5 credit/week</strong> · <strong>6.0 credits total</strong><br />
-        Faculty: Drs. Sayed, Han, and Okafor. Co-sponsored by Northvale Therapeutics and CHEST.
+        Faculty: Drs. Sayed, Han, and Okafor. Co-sponsored by HCP Campaign Studio and CHEST.
       </div>
       <a className="email-cta">Enroll for free</a> <a className="email-cta outline">See the case list</a>
       <h3>Week 1 — a 64-year-old with refractory T2DM</h3>
@@ -241,7 +241,7 @@ const Bodies: Record<string, BodyRenderer> = {
       <p>Thanks for the time this morning — and for the candor about where the formulary committee sits on prior auth. As promised, I've attached the one-page eligibility flow and the savings card you can leave at the front desk.</p>
       <p>If it's useful, I can swing by next Thursday afternoon with the patient-counseling deck for your NPs. No pressure either way.</p>
       <a className="email-cta">Confirm Thursday at 2:30 PM</a> <a className="email-cta outline">Reschedule</a>
-      <p>— <strong>Sam Okeke</strong>, Field Account Manager, Northvale Therapeutics<br /><span style={{ color: "var(--muted)", fontSize: 12 }}>(415) 555-2104 · sam.okeke@northvale.example</span></p>
+      <p>— <strong>Sam Okeke</strong>, Field Account Manager, HCP Campaign Studio<br /><span style={{ color: "var(--muted)", fontSize: 12 }}>(415) 555-2104 · sam.okeke@hcpcampaign.example</span></p>
       <EmailFoot />
     </div>
   ),
@@ -263,5 +263,5 @@ const Bodies: Record<string, BodyRenderer> = {
 
 export function EmailBody({ template }: { template: EmailBodyTemplate }) {
   const renderer = Bodies[template.body_type] ?? Bodies.letter;
-  return renderer(template);
+  return <div className="email-body">{renderer(template)}</div>;
 }
