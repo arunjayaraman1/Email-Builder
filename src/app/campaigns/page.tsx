@@ -23,7 +23,7 @@ export default function CampaignsPage() {
 
   useEffect(() => {
     getCampaigns()
-      .then(setCampaigns)
+      .then((data) => setCampaigns(data as CampaignRecord[]))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

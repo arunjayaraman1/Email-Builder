@@ -25,7 +25,7 @@ export default function SearchModal({ onClose }: SearchModalProps) {
   const { setSelectedTemplate, setMode } = useCampaignStore();
 
   useEffect(() => {
-    getTemplates().then(setTemplates).catch(console.error).finally(() => setLoading(false));
+    getTemplates().then((data) => setTemplates(data as TemplateCard[])).catch(console.error).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => {

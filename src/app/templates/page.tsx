@@ -133,7 +133,7 @@ export default function TemplatesPage() {
   useEffect(() => {
     fetch(`/api/templates`)
       .then((r) => r.json())
-      .then(setTemplates)
+      .then((data) => setTemplates(data as Template[]))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

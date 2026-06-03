@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TEMPLATES, TONE_MAP, CONCEPT_MAP } from "@/data/templates";
-import { getClient, MODEL } from "@/lib/openrouter";
+import { generateText, MODEL } from "@/lib/cloudflare-ai";
 
 const FALLBACK: Record<string, { text: string; audience: string; recs: object[] }> = {
   "phase iii": {
@@ -71,12 +71,15 @@ function buildTemplateList(): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { message, therapyArea = "Oncology", audience = "HCP" } = await req.json();
+  const body = await req.json() as { message: string; therapyArea?: string; audience?: string };
+  const { message, therapyArea = "Oncology", audience = "HCP" } = body;
 
-  const client = getClient();
-  if (client) {
-    try {
-      const prompt = `Campaign context:
+  const raw = await generateText({
+    messages: [
+      { role: "system", content: "You are an HCP campaign strategist. Output valid JSON only." },
+      {
+        role: "user",
+        content: `Campaign context:
 - Therapy area: ${therapyArea}
 - Audience: ${audience}
 - User message: "${message}"
@@ -90,20 +93,16 @@ Respond with JSON:
   "audience": "suggested audience description with size estimate",
   "recs": [{"id":"...","name":"...","tone":"...","concept":"...","stars":4.5,"opens":"42%","score":92,"reason":"one sentence why"}]
 }
-Include 2-3 best-matching templates. Score 0-100.`;
+Include 2-3 best-matching templates. Score 0-100.`,
+      },
+    ],
+    temperature: 0.6,
+    max_tokens: 600,
+    response_format: { type: "json_object" },
+  });
 
-      const response = await client.chat.completions.create({
-        model: MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are an HCP campaign strategist. Output valid JSON only." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.6,
-        max_tokens: 600,
-      });
-
-      const raw = response.choices[0]?.message?.content ?? "{}";
+  if (raw) {
+    try {
       const result = JSON.parse(raw);
       return NextResponse.json({
         text: result.text ?? "Here are my recommendations.",
@@ -111,7 +110,7 @@ Include 2-3 best-matching templates. Score 0-100.`;
         recs: result.recs ?? [],
       });
     } catch (e) {
-      console.error("ai/chat failed:", e);
+      console.error("ai/chat parse failed:", e);
     }
   }
 

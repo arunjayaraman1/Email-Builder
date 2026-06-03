@@ -15,20 +15,20 @@ export function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
+  const data = await req.json() as Record<string, unknown>;
   const record: CampaignRecord = {
     id: randomUUID(),
-    name: body.name,
-    templateId: body.templateId,
-    therapyArea: body.therapyArea,
-    audience: body.audience,
-    campaignType: body.campaignType,
-    tone: body.tone,
-    subject: body.subject,
-    status: body.status,
-    opens: body.status === "sent" ? (OPENS_MAP[body.templateId] ?? "—") : "—",
+    name: data.name as string,
+    templateId: data.templateId as string,
+    therapyArea: data.therapyArea as string,
+    audience: data.audience as string,
+    campaignType: data.campaignType as string,
+    tone: data.tone as string,
+    subject: data.subject as string,
+    status: data.status as string,
+    opens: data.status === "sent" ? (OPENS_MAP[data.templateId as string] ?? "—") : "—",
     createdAt: new Date().toISOString(),
-    scheduledAt: body.scheduledAt ?? undefined,
+    scheduledAt: data.scheduledAt as string | undefined,
   };
   CAMPAIGNS.push(record);
   return NextResponse.json(record);

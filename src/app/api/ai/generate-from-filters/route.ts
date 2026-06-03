@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClient, MODEL } from "@/lib/openrouter";
+import { generateText, MODEL } from "@/lib/cloudflare-ai";
 
 const FALLBACK: Record<string, { subject: string; headline: string; preheader: string; body: string; cta: string }> = {
   "congress-promotional": {
@@ -51,32 +51,31 @@ function getFallbackKey(campaignType: string, tone: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const { campaignType, tone, therapyArea, audience = "HCP" } = await req.json();
+  const body = await req.json() as { campaignType: string; tone: string; therapyArea: string; audience?: string };
+  const { campaignType, tone, therapyArea, audience = "HCP" } = body;
 
-  const client = getClient();
-  if (client) {
-    try {
-      const prompt = `Write an HCP email with these parameters:
+  const raw = await generateText({
+    messages: [
+      { role: "system", content: "You are an expert HCP email copywriter. Output valid JSON only." },
+      {
+        role: "user",
+        content: `Write an HCP email with these parameters:
 - Campaign type: ${campaignType}
 - Tone: ${tone}
 - Therapy area: ${therapyArea}
 - Audience: ${audience}
 
 Return JSON: {"subject":"...","headline":"...","preheader":"...","body_html":"<p>...</p><p>...</p>","cta":"..."}
-Rules: ${tone} tone, no invented drug names, body_html = 2 <p> tags.`;
+Rules: ${tone} tone, no invented drug names, body_html = 2 <p> tags.`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 500,
+    response_format: { type: "json_object" },
+  });
 
-      const response = await client.chat.completions.create({
-        model: MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are an expert HCP email copywriter. Output valid JSON only." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 500,
-      });
-
-      const raw = response.choices[0]?.message?.content ?? "{}";
+  if (raw) {
+    try {
       const result = JSON.parse(raw);
       const required = ["subject", "headline", "preheader", "body_html", "cta"];
       if (required.every((k) => k in result)) {
@@ -87,7 +86,7 @@ Rules: ${tone} tone, no invented drug names, body_html = 2 <p> tags.`;
         });
       }
     } catch (e) {
-      console.error("generate-from-filters failed:", e);
+      console.error("generate-from-filters parse failed:", e);
     }
   }
 

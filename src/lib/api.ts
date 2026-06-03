@@ -62,7 +62,7 @@ export async function getSubjectLines(
     body: JSON.stringify({ templateId, therapyArea, audience }),
   });
   if (!res.ok) throw new Error("Failed to get subject lines");
-  const data = await res.json();
+  const data = await res.json() as { subjectLines?: string[] };
   return data.subjectLines ?? [];
 }
 
@@ -167,6 +167,6 @@ export async function polishContent(params: {
     body: JSON.stringify(params),
   });
   if (!res.ok) return params.content; // silent fallback
-  const data = await res.json();
+  const data = await res.json() as { polished?: string };
   return data.polished ?? params.content;
 }

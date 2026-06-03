@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TEMPLATES, TONE_MAP } from "@/data/templates";
-import { getClient, MODEL } from "@/lib/openrouter";
+import { generateText, MODEL } from "@/lib/cloudflare-ai";
 
 const CTA_MAP: Record<string, string> = {
   rsvp: "Reserve My Seat", stats: "View Full Data", letter: "Read the Full Letter",
@@ -22,12 +22,16 @@ function personalize(text: string, therapyArea: string, audience: string): strin
 }
 
 export async function POST(req: NextRequest) {
+  const params = await req.json() as {
+    templateId: string; audience: string; therapyArea: string;
+    subject?: string; brand?: string; geo?: string; tone?: string; campaignType?: string; brief?: string;
+  };
   const {
     templateId, audience, therapyArea,
     subject: subjectHint,
     brand, geo, tone: reqTone, campaignType,
-    brief,  // free-text campaign brief from the user
-  } = await req.json();
+    brief,
+  } = params;
 
   const template = TEMPLATES.find((t) => t.id === templateId);
   if (!template) return NextResponse.json({ error: "Template not found" }, { status: 404 });
@@ -35,28 +39,29 @@ export async function POST(req: NextRequest) {
   const toneLabel = TONE_MAP[template.tone] ?? template.tone;
 
   // Try AI generation
-  const client = getClient();
-  if (client) {
-    try {
-      const heroContext = template.hero
-        ? `Hero eyebrow: ${template.hero.eyebrow}\nHero sub: ${template.hero.sub}`
-        : "";
+  const heroContext = template.hero
+    ? `Hero eyebrow: ${template.hero.eyebrow}\nHero sub: ${template.hero.sub}`
+    : "";
 
-      // Build rich context section
-      const contextLines = [
-        `- Template: ${template.title} (${toneLabel} tone, ${template.concept} concept)`,
-        `- Therapy area: ${therapyArea}`,
-        `- Audience: ${audience}`,
-        brand        ? `- Brand / product: ${brand}` : null,
-        geo          ? `- Geography: ${geo}` : null,
-        campaignType ? `- Campaign type: ${campaignType}` : null,
-        `- Description: ${template.desc}`,
-        heroContext || null,
-        brief        ? `- Campaign brief (key context from user): "${brief}"` : null,
-        subjectHint  ? `- Preferred subject line: ${subjectHint}` : null,
-      ].filter(Boolean).join("\n");
+  const contextLines = [
+    `- Template: ${template.title} (${toneLabel} tone, ${template.concept} concept)`,
+    `- Therapy area: ${therapyArea}`,
+    `- Audience: ${audience}`,
+    brand        ? `- Brand / product: ${brand}` : null,
+    geo          ? `- Geography: ${geo}` : null,
+    campaignType ? `- Campaign type: ${campaignType}` : null,
+    `- Description: ${template.desc}`,
+    heroContext || null,
+    brief        ? `- Campaign brief (key context from user): "${brief}"` : null,
+    subjectHint  ? `- Preferred subject line: ${subjectHint}` : null,
+  ].filter(Boolean).join("\n");
 
-      const prompt = `Generate an HCP email with this context:
+  const raw = await generateText({
+    messages: [
+      { role: "system", content: "You are an expert HCP email copywriter. Output valid JSON only." },
+      {
+        role: "user",
+        content: `Generate an HCP email with this context:
 ${contextLines}
 
 Return JSON: {"subject":"...","headline":"...","preheader":"...","body_html":"<p>...</p><p>...</p>","cta":"..."}
@@ -65,20 +70,16 @@ Rules:
 - Use any specific details from the campaign brief (event name, drug, data, speaker, etc.) directly in the copy
 - Do NOT invent drug names or statistics unless they appear in the brief
 - body_html: 2-3 <p> tags, medically accurate, HCP-appropriate
-- Subject under 60 characters`;
+- Subject under 60 characters`,
+      },
+    ],
+    temperature: 0.7,
+    max_tokens: 900,
+    response_format: { type: "json_object" },
+  });
 
-      const response = await client.chat.completions.create({
-        model: MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are an expert HCP email copywriter. Output valid JSON only." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 900,
-      });
-
-      const raw = response.choices[0]?.message?.content ?? "{}";
+  if (raw) {
+    try {
       const result = JSON.parse(raw);
       const required = ["subject", "headline", "preheader", "body_html", "cta"];
       if (required.every((k) => k in result)) {
@@ -89,7 +90,7 @@ Rules:
         });
       }
     } catch (e) {
-      console.error("AI generate failed:", e);
+      console.error("AI generate parse failed:", e);
     }
   }
 

@@ -80,7 +80,7 @@ export default function ContextBar() {
   const [opts, setOpts] = useState<Options | null>(null);
 
   useEffect(() => {
-    getOptions().then(setOpts).catch(console.error);
+    getOptions().then((data) => setOpts(data as Options)).catch(console.error);
   }, []);
 
   useEffect(() => setQ(""), [openId]);

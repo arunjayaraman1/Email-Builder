@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getClient, MODEL } from "@/lib/openrouter";
+import { generateText, MODEL } from "@/lib/cloudflare-ai";
 
 const SECTION_PROMPTS: Record<string, string> = {
   headline: "Make this headline more compelling and action-oriented. Keep it under 15 words.",
@@ -9,24 +9,21 @@ const SECTION_PROMPTS: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
-  const { section, content, tone, therapyArea, audience, context } = await req.json();
+  const body = await req.json() as { section: string; content: string; tone: string; therapyArea: string; audience: string; context?: string };
+  const { section, content, tone, therapyArea, audience, context } = body;
 
   if (!content?.trim()) {
     return NextResponse.json({ polished: content });
   }
 
-  const client = getClient();
-
-  if (!client) {
-    return NextResponse.json(
-      { error: "AI polish requires an API key", polished: content },
-      { status: 503 }
-    );
-  }
-
   const sectionInstruction = SECTION_PROMPTS[section] ?? "Polish this text to be more professional and engaging.";
 
-  const prompt = `You are an expert HCP email copywriter. Polish the following email ${section} for a healthcare professional audience.
+  const raw = await generateText({
+    messages: [
+      { role: "system", content: "You are an expert HCP email copywriter. Output valid JSON only." },
+      {
+        role: "user",
+        content: `You are an expert HCP email copywriter. Polish the following email ${section} for a healthcare professional audience.
 
 Context:
 - Email tone: ${tone}
@@ -39,29 +36,24 @@ Keep the ${tone} tone throughout. Do NOT invent drug names, statistics, or clini
 Current ${section}:
 "${content}"
 
-Return JSON only: {"polished": "improved text here"}`;
+Return JSON only: {"polished": "improved text here"}`,
+      },
+    ],
+    temperature: 0.6,
+    max_tokens: 300,
+    response_format: { type: "json_object" },
+  });
 
-  try {
-    const response = await client.chat.completions.create({
-      model: MODEL,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "You are an expert HCP email copywriter. Output valid JSON only." },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.6,
-      max_tokens: 300,
-    });
-
-    const raw = response.choices[0]?.message?.content ?? "{}";
-    // Strip markdown fences if the model wraps JSON in ```json ... ```
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
-    const result = JSON.parse(cleaned);
-    const polished = result.polished?.trim() || content;
-
-    return NextResponse.json({ polished });
-  } catch (e) {
-    console.error("Polish failed:", e);
-    return NextResponse.json({ polished: content });
+  if (raw) {
+    try {
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "").trim();
+      const result = JSON.parse(cleaned);
+      const polished = result.polished?.trim() || content;
+      return NextResponse.json({ polished });
+    } catch (e) {
+      console.error("Polish parse failed:", e);
+    }
   }
+
+  return NextResponse.json({ polished: content });
 }

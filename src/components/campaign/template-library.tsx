@@ -75,7 +75,7 @@ export default function TemplateLibrary() {
   useEffect(() => {
     fetch(`/api/templates`)
       .then((r) => r.json())
-      .then(setTemplates)
+      .then((data) => setTemplates(data as TemplateCard[]))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TEMPLATES, TONE_MAP } from "@/data/templates";
-import { getClient, MODEL } from "@/lib/openrouter";
+import { generateText, MODEL } from "@/lib/cloudflare-ai";
 
 const FALLBACK: Record<string, string[]> = {
   clinical:       ["New data on {ta} — see the numbers", "Evidence update: {ta} outcomes", "Phase III results you should review"],
@@ -12,40 +12,39 @@ const FALLBACK: Record<string, string[]> = {
 };
 
 export async function POST(req: NextRequest) {
-  const { templateId, therapyArea, audience } = await req.json();
+  const body = await req.json() as { templateId: string; therapyArea: string; audience: string };
+  const { templateId, therapyArea, audience } = body;
 
   const template = TEMPLATES.find((t) => t.id === templateId);
   if (!template) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const client = getClient();
-  if (client) {
-    try {
-      const tone = TONE_MAP[template.tone] ?? template.tone;
-      const prompt = `Generate 3 subject line variations for this HCP email:
+  const tone = TONE_MAP[template.tone] ?? template.tone;
+  const raw = await generateText({
+    messages: [
+      { role: "system", content: "You are an HCP email copywriter. Output valid JSON only." },
+      {
+        role: "user",
+        content: `Generate 3 subject line variations for this HCP email:
 - Template: ${template.title} (${tone} tone, ${template.concept} concept)
 - Therapy area: ${therapyArea}, Audience: ${audience}
 
 Return JSON: {"subject_lines":["...","...","..."]}
-Each under 60 chars, different angles (urgency/curiosity/evidence). HCP-appropriate.`;
+Each under 60 chars, different angles (urgency/curiosity/evidence). HCP-appropriate.`,
+      },
+    ],
+    temperature: 0.8,
+    max_tokens: 200,
+    response_format: { type: "json_object" },
+  });
 
-      const response = await client.chat.completions.create({
-        model: MODEL,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: "You are an HCP email copywriter. Output valid JSON only." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.8,
-        max_tokens: 200,
-      });
-
-      const raw = response.choices[0]?.message?.content ?? "{}";
+  if (raw) {
+    try {
       const result = JSON.parse(raw);
       if (Array.isArray(result.subject_lines) && result.subject_lines.length > 0) {
         return NextResponse.json({ subjectLines: result.subject_lines.slice(0, 3) });
       }
     } catch (e) {
-      console.error("subject-lines AI failed:", e);
+      console.error("subject-lines parse failed:", e);
     }
   }
 
